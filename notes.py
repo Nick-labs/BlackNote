@@ -18,9 +18,10 @@ class Note(QMainWindow):
         self.closeButton.setStyleSheet('''background-color: gray;
                                           border-style: outset;
                                           border-width: 1px;
-                                          border-color: black;
-                                          font: bold 12px;
+                                          border-color: gray;
+                                          font: bold 10px;
                                           padding: 6px''')
+        self.textEdit.setStyleSheet('border: 0')
         self.load_notes()
         conn.close()
 
@@ -32,7 +33,9 @@ class Note(QMainWindow):
 
     def delete_window(self):
         print('delete')
-        self.close()
+        result = QMessageBox.question(self, "Confirm delete", "Are you sure you want to delete this note?")
+        if result == QMessageBox.Yes:
+            self.close()
 
     # @staticmethod
     def load_notes(self):
@@ -58,6 +61,15 @@ def except_hook(cls, exception, traceback):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    palette = QPalette()
+    palette.setColor(QPalette.Window, QColor('#AAAAAA'))
+    # palette.setColor(QPalette.WindowText, QColor(121, 85, 72))
+    # palette.setColor(QPalette.ButtonText, QColor(121, 85, 72))
+    # palette.setColor(QPalette.Text, QColor('#AAAAAA'))
+    palette.setColor(QPalette.Base, QColor('#AAAAAA'))
+    #palette.setColor(QPalette.AlternateBase, QColor(188, 170, 164))
+    app.setPalette(palette)
     ex = Note()
     ex.show()
     sys.excepthook = except_hook
