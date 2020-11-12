@@ -4,7 +4,6 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import sys
 
-# подключил git
 
 class Note(QMainWindow):
     def __init__(self):
@@ -20,9 +19,6 @@ class Note(QMainWindow):
         # print(delta)
         self.move(self.x() + delta.x(), self.y() + delta.y())
         self.oldPos = event.globalPos()
-
-    def test(self):
-        pass
 
 
 def except_hook(cls, exception, traceback):
