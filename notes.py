@@ -23,7 +23,7 @@ class Note(QMainWindow):
                                           padding: 6px''')
         self.textEdit.setStyleSheet('border: 0')
         self.load_notes()
-        conn.close()
+
 
         self.closeButton.pressed.connect(self.delete_window)
         self.textEdit.textChanged.connect(self.save)
@@ -73,4 +73,5 @@ if __name__ == '__main__':
     ex = Note()
     ex.show()
     sys.excepthook = except_hook
+    conn.close()
     sys.exit(app.exec())
