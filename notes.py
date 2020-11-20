@@ -10,14 +10,11 @@ conn = sqlite3.connect('notes.db')
 cursor = conn.cursor()
 
 
-def create_new_note():
-    main()
-
-
 class MainWindow(QMainWindow):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, note=None, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         uic.loadUi('note.ui', self)
+        self.pushButton.setText(u"\u2699")
         self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         # self.closeButton.setStyleSheet('''background-color: gray;
         #                                   border-style: outset;
@@ -26,7 +23,10 @@ class MainWindow(QMainWindow):
         #                                   font: bold 10px;
         #                                   padding: 6px''')
         self.textEdit.setStyleSheet('border: 0')
-        self.load_notes()
+
+        self.note = note
+        self.textEdit.setText(self.note[1])
+        self.move(self.note[2], self.note[3])
 
         self.closeButton.pressed.connect(self.delete_window)
         # self.newButton.pressed.connect(create_new_note)
@@ -34,18 +34,18 @@ class MainWindow(QMainWindow):
 
     def save(self):
         print(self.textEdit.toPlainText())
+        cursor.execute(
+            f"""UPDATE notes SET text = "{self.textEdit.toPlainText()}",
+                x = {self.x()}, y = {self.y()} WHERE id = {self.note[0]}""")
+        conn.commit()
 
     def delete_window(self):
         print('delete')
-        result = QMessageBox.question(self, "Confirm delete", "Are you sure you want to delete this note?")
+        result = QMessageBox.question(self, 'Confirm delete', 'Are you sure you want to delete this note?')
         if result == QMessageBox.Yes:
             self.close()
-
-    # @staticmethod
-    def load_notes(self):
-        cursor.execute("SELECT * FROM notes")
-        notes = cursor.fetchall()
-        print(notes)
+            print('deleted')
+            self.save()
 
     def mousePressEvent(self, event):
         self.oldPos = event.globalPos()
@@ -54,10 +54,8 @@ class MainWindow(QMainWindow):
 
     def mouseMoveEvent(self, event):
         delta = QPoint(event.globalPos() - self.oldPos)
-        # print(delta)
         self.move(self.x() + delta.x(), self.y() + delta.y())
         self.oldPos = event.globalPos()
-
         self.drag_active = True
 
     def mouseReleaseEvent(self, event):
@@ -67,12 +65,20 @@ class MainWindow(QMainWindow):
             self.drag_active = False
 
 
+def load_notes():
+    cursor.execute("SELECT * FROM notes")
+    notes = cursor.fetchall()
+    print(notes)
+    return notes
+
+
 def except_hook(cls, exception, traceback):
     sys.__excepthook__(cls, exception, traceback)
 
 
 def main():
     app = QApplication(sys.argv)
+
     app.setStyle("Fusion")
     palette = QPalette()
     palette.setColor(QPalette.Window, QColor('#AAAAAA'))
@@ -82,7 +88,10 @@ def main():
     palette.setColor(QPalette.Base, QColor('#AAAAAA'))
     # palette.setColor(QPalette.AlternateBase, QColor(188, 170, 164))
     app.setPalette(palette)
-    ex = MainWindow()
+
+    notes = load_notes()
+
+    ex = MainWindow(note=notes[0])
     ex.show()
     sys.excepthook = except_hook
     sys.exit(app.exec())
