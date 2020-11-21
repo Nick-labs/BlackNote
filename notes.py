@@ -14,43 +14,92 @@ class MainWindow(QMainWindow):
     def __init__(self, note=None, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         uic.loadUi('note.ui', self)
-        self.pushButton.setText(u"\u2699")
+        self.setFixedSize(220, 260)
+        self.settingsButton.setText(u'\u2699')
         self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
-        # self.closeButton.setStyleSheet('''background-color: gray;
-        #                                   border-style: outset;
-        #                                   border-width: 1px;
-        #                                   border-color: gray;
-        #                                   font: bold 10px;
-        #                                   padding: 6px''')
         self.textEdit.setStyleSheet('border: 0')
 
         self.note = note
         self.textEdit.setText(self.note[1])
         self.move(self.note[2], self.note[3])
 
-        self.closeButton.pressed.connect(self.delete_window)
-        # self.newButton.pressed.connect(create_new_note)
+        self.menubar_is_active = False
+
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(self.style().standardIcon(QStyle.SP_FileIcon))
+
+        '''
+            Объявим и добавим действия для работы с иконкой системного трея
+            show - показать окно
+            hide - скрыть окно
+            exit - выход из программы
+        '''
+
+        show_action = QAction("Show", self)
+        hide_action = QAction("Hide", self)
+        close_action = QAction("Close program", self)
+        show_action.triggered.connect(self.show)
+        hide_action.triggered.connect(self.hide)
+        close_action.triggered.connect(self.close_program)
+        tray_menu = QMenu()
+        tray_menu.addAction(show_action)
+        tray_menu.addAction(hide_action)
+        tray_menu.addAction(close_action)
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.show()
+
+        exitAction = QAction('&Close', self)
+        exitAction.setShortcut('Ctrl+Q')
+        exitAction.triggered.connect(self.close_window)
+
+        saveAction = QAction('&Save', self)
+        saveAction.setShortcut('Ctrl+S')
+        saveAction.triggered.connect(self.save)
+
+        menubar = self.menuBar()
+        menubar.hide()
+        fileMenu = menubar.addMenu('&File')
+        fileMenu.addAction(exitAction)
+        fileMenu.addAction(saveAction)
+
+        self.drag_active = False
+
+        self.closeButton.pressed.connect(self.close_window)
+        self.settingsButton.pressed.connect(self.menubar_change)
         self.textEdit.textChanged.connect(self.save)
 
     def save(self):
-        print(self.textEdit.toPlainText())
+        print(f'saved "{self.textEdit.toPlainText()}"')
         cursor.execute(
             f"""UPDATE notes SET text = "{self.textEdit.toPlainText()}",
                 x = {self.x()}, y = {self.y()} WHERE id = {self.note[0]}""")
         conn.commit()
 
-    def delete_window(self):
-        print('delete')
-        result = QMessageBox.question(self, 'Confirm delete', 'Are you sure you want to delete this note?')
+    def close_program(self):
+        QCoreApplication.exit(0)
+
+    def close_window_without_question(self):
+        self.close()
+        self.save()
+
+    def close_window(self):
+        print('close')
+        result = QMessageBox.question(self, 'Confirm close', 'Are you sure you want to close this note?')
         if result == QMessageBox.Yes:
             self.close()
-            print('deleted')
             self.save()
+            print('closed')
+
+    def menubar_change(self):
+        if not self.menubar_is_active:
+            self.menuBar().show()
+            self.menubar_is_active = True
+        else:
+            self.menuBar().hide()
+            self.menubar_is_active = False
 
     def mousePressEvent(self, event):
         self.oldPos = event.globalPos()
-        if event.button() == Qt.RightButton:
-            print('right click')
 
     def mouseMoveEvent(self, event):
         delta = QPoint(event.globalPos() - self.oldPos)
@@ -60,7 +109,7 @@ class MainWindow(QMainWindow):
 
     def mouseReleaseEvent(self, event):
         if self.drag_active:
-            # self.save()
+            self.save()
             print('drag')
             self.drag_active = False
 
@@ -78,15 +127,12 @@ def except_hook(cls, exception, traceback):
 
 def main():
     app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
 
     app.setStyle("Fusion")
     palette = QPalette()
     palette.setColor(QPalette.Window, QColor('#AAAAAA'))
-    # palette.setColor(QPalette.WindowText, QColor(121, 85, 72))
-    # palette.setColor(QPalette.ButtonText, QColor(121, 85, 72))
-    # palette.setColor(QPalette.Text, QColor('#AAAAAA'))
     palette.setColor(QPalette.Base, QColor('#AAAAAA'))
-    # palette.setColor(QPalette.AlternateBase, QColor(188, 170, 164))
     app.setPalette(palette)
 
     notes = load_notes()
