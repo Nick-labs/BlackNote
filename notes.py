@@ -1,20 +1,20 @@
-from PyQt5 import uic
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+# -*- coding: utf-8 -*-
+
 import sys
 import sqlite3
 
-# Создаем соединение с нашей базой данных
-conn = sqlite3.connect('notes.db')
-cursor = conn.cursor()
+from PyQt5.QtGui import QPalette, QColor
+from PyQt5.QtWidgets import QMainWindow, QSystemTrayIcon, QStyle, QAction, QMenu, QMessageBox, QApplication
+from PyQt5.QtCore import QCoreApplication, QPoint, Qt
+
+from note_ui import Ui_MainWindow
 
 
-class MainWindow(QMainWindow):
+class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, note=None, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
-        uic.loadUi('note.ui', self)
+        self.setupUi(self)
 
         self.setFixedSize(220, 260)
         self.settingsButton.setText(u'\u2699')
@@ -52,7 +52,7 @@ class MainWindow(QMainWindow):
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.show()
 
-        """Создаем события для menubar"""
+        'Создаем события для menubar'
         exit_action = QAction('&Close note', self)
         exit_action.setShortcut('Ctrl+Q')
         exit_action.triggered.connect(self.close_window)
@@ -82,7 +82,7 @@ class MainWindow(QMainWindow):
         'Создаем menubar и добавляем в него раннее созданные действия'
         menubar = self.menuBar()
         menubar.hide()
-        fileMenu = menubar.addMenu('&File')
+        fileMenu = menubar.addMenu('&Menu')
         fileMenu.addAction(save_action)
         fileMenu.addAction(exit_action)
         fileMenu.addAction(close_program_action)
@@ -135,7 +135,7 @@ class MainWindow(QMainWindow):
     def close_window(self):
         """Закрытие(сворачивание) окна"""
 
-        result = QMessageBox.question(self, 'Confirm close', 'Are you sure you want to close this note?')
+        result = QMessageBox.question(self, 'Confirm close', 'Are you sure you want to close the note?')
         if result == QMessageBox.Yes:
             self.close()
             self.save()
@@ -143,12 +143,14 @@ class MainWindow(QMainWindow):
     def menubar_change(self):
         """Прячем или показываем menubar"""
 
-        if not self.menubar_is_active:
-            self.menuBar().show()
-            self.menubar_is_active = True
-        else:
+        if self.menubar_is_active:
             self.menuBar().hide()
+            self.textEdit.setFixedHeight(220)
             self.menubar_is_active = False
+        else:
+            self.menuBar().show()
+            self.textEdit.setFixedHeight(200)
+            self.menubar_is_active = True
 
     """Далее методы для перемещения окна мышкой"""
 
@@ -168,11 +170,10 @@ class MainWindow(QMainWindow):
 
 
 def load_notes():
-    """Загружаем записки из базы данных"""
+    """Загружаем заметки из базы данных"""
 
     cursor.execute("SELECT * FROM notes")
     notes = cursor.fetchall()
-    print(notes)
     return notes
 
 
@@ -180,7 +181,11 @@ def except_hook(cls, exception, traceback):
     sys.__excepthook__(cls, exception, traceback)
 
 
-def main():
+if __name__ == '__main__':
+    'Подключение к базе данных'
+    conn = sqlite3.connect('notes.db')
+    cursor = conn.cursor()
+
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
 
@@ -192,12 +197,10 @@ def main():
 
     notes = load_notes()
 
-    ex = MainWindow(note=notes[0])
-    ex.show()
+    bn = MainWindow(note=notes[0])
+    bn.show()
     sys.excepthook = except_hook
     sys.exit(app.exec())
+
+    'Закрытие бахы данных'
     conn.close()
-
-
-if __name__ == '__main__':
-    main()
